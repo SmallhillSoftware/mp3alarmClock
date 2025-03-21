@@ -17,12 +17,13 @@
 /******************************************************************************
  * globale Defines
  ******************************************************************************/
-#define SEGCLOCKpin 0
-#define RELOADvalFor20ms 25536
+#define SEGCLOCKpin 10
+//#define RELOADvalFor20ms 25536
+#define RELOADvalFor20ms 61535
 #define BCDApin 1
 #define BCDBpin 2
 #define BCDCpin 9
-#define BCDDpin 10
+#define BCDDpin 0
 
 
 /******************************************************************************
@@ -169,35 +170,36 @@ ISR(TIMER1_OVF_vect)
   }
   //Pin-Wert an Portpin schreiben
   digitalWrite(SEGCLOCKpin, LOW);
-  switch (digitToUpdate)
+  if (digitToUpdate == 0)
   {
-    case 0:
-      //write upper nibble of hour
-      writeBcdToSegPins(currHr, 1);
-      digitToUpdate = 1;
-      break;
-    case 1:
-      //write lower nibble of hour
-      writeBcdToSegPins(currHr, 0);
-      digitToUpdate = 2;
-      break;
-    case 2:
-      //write upper nibble of minute
-      writeBcdToSegPins(currMin, 1);
-      digitToUpdate = 3;
-      break;
-    case 3:
-      //write lower nibble of minute
-      writeBcdToSegPins(currMin, 0);
-      digitToUpdate = 4;
-      break;
-    case 4:
-      //write symbols a,c
-      writeBcdToSegPins(12, 2);
-      digitToUpdate = 0;
-      break;
-    default:
-      break;
+    writeBcdToSegPins(currHr, 1);
+    digitToUpdate = 1;
+  }
+  else if (digitToUpdate == 1)
+  {
+    writeBcdToSegPins(currHr, 0);
+    digitToUpdate = 2;
+  }
+  else if (digitToUpdate == 2)
+  {
+    writeBcdToSegPins(currMin, 1);
+    digitToUpdate = 3;
+  }
+  else if (digitToUpdate == 3)
+  {
+    writeBcdToSegPins(currMin, 0);
+    digitToUpdate = 4;
+  }
+  else if (digitToUpdate == 4)
+  {
+    writeBcdToSegPins(12, 2);
+    digitToUpdate = 5;
+  }
+  else if (digitToUpdate == 5)
+  {
+    //
+    writeBcdToSegPins(12, 2);
+    digitToUpdate = 0;
   }
   //Pin-Wert an Portpin schreiben
   digitalWrite(SEGCLOCKpin, HIGH);
