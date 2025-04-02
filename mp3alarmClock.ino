@@ -27,15 +27,32 @@
 #define BCDDpin 0
 #define DISPSTATECLK 12 //C
 #define DISPSTATEALM 10 //A
-#define DISPSTATE_TST1 11 //b
+#define DISPSTATEACT 15 //F
+#define DISPSTATEVER 11 //b
 #define DISPSTATE_TST2 13 //d
 #define DISPSTATE_TST3 14 //e
-#define DISPSTATE_TST4 15 //f
+
+
+#define D_PowerOff_State             0
+#define D_ShowVersion_State          1
+#define D_noTimeYet_State            2
+#define D_RunClockNoAlarmSet_State   3
+#define D_RunClockAlarmSet_State     4
+#define D_RunClockAlarmActive_State  5
+#define D_AdjustTime_State           6
+#define D_AdjustTimeHr_State         7
+#define D_AdjustTimeMn_State         8
+#define D_AdjustAlarm_State          9
+#define D_AdjustAlarmHr_State       10
+#define D_AdjustAlarmMn_State       11
 
 
 /******************************************************************************
  * globale Variablen
  ******************************************************************************/
+byte mk_month = 4;
+byte mk_day = 1;
+
 //Variable für Dateinamen anlegen
 //Dateinamen entsprechend 8.3 Format
 char filename[13] = "01.wav";
@@ -67,6 +84,9 @@ MCP23008 MCP(0x20);
 #define MININCBUTTON  3
 #define ALMONBUTTON   4
 byte buttonState = 0;
+
+//state machine
+byte BT_State = D_PowerOff_State;
 
 /******************************************************************************
  * Funktionen
@@ -247,53 +267,105 @@ ISR(TIMER1_OVF_vect)
 
 void loop()
 {
-  /*
-  if (MCP.read1(ALMBUTTON))
+  //read in buttons
+  if (MCP.read1(ALMBUTTON) == true)
   {
     buttonState = buttonState | (1 << ALMBUTTON);
-    dispState = DISPSTATECLK;
   }
   else
   {
-    buttonState = buttonState & B11111110;
+    buttonState = buttonState & (~(1 << ALMBUTTON));
   }
-  if (MCP.read1(SETTIMEBUTTON))
+  if (MCP.read1(SETTIMEBUTTON) == true)
   {
     buttonState = buttonState | (1 << SETTIMEBUTTON);
-    dispState = DISPSTATEALM;
   }
   else
   {
-    buttonState = buttonState & B11111101;
+    buttonState = buttonState & (~(1 << SETTIMEBUTTON));
   }
-  if (MCP.read1(HOURINCBUTTON))
+  if (MCP.read1(HOURINCBUTTON) == true)
   {
     buttonState = buttonState | (1 << HOURINCBUTTON);
   }
   else
   {
-    buttonState = buttonState & B11111011;
+    buttonState = buttonState & (~(1 << HOURINCBUTTON));
   }
-  if (MCP.read1(MININCBUTTON))
+  if (MCP.read1(MININCBUTTON) == true)
   {
     buttonState = buttonState | (1 << MININCBUTTON);
   }
   else
   {
-    buttonState = buttonState & B11110111;
+    buttonState = buttonState & (~(1 << MININCBUTTON));
   }
-  */
-  if (MCP.read1(ALMONBUTTON) == false)
+  if (MCP.read1(ALMONBUTTON) == true)
   {
-    dispHr = currHr;
-    dispMin = currMin;
-    dispState = DISPSTATEALM;
+    buttonState = buttonState | (1 << ALMONBUTTON);
   }
   else
   {
-    dispHr = currHr;
-    dispMin = currMin;
-    dispState = DISPSTATECLK;
+    buttonState = buttonState & (~(1 << ALMONBUTTON));
   }
+  //state machine
+  switch (BT_State)
+  {
+    case D_PowerOff_State:
+      BT_State = D_ShowVersion_State;
+      break; //D_PowerOff_State
+    case D_ShowVersion_State:
+      dispHr = mk_month;
+      dispMin = mk_day;
+      dispState = DISPSTATEVER;
+      delay(3000); //condition to change to next state
+      BT_State = D_noTimeYet_State;
+      break; //D_ShowVersion_State
+    case D_noTimeYet_State:
+      dispHr = 77;
+      dispMin = 77;
+      dispState = DISPSTATECLK;
+      //any button pressed
+      if (buttonState > 0)
+      {
+        BT_State = D_RunClockNoAlarmSet_State;
+      }
+      break; //D_noTimeYet_State
+    case D_RunClockNoAlarmSet_State:
+      dispHr = currHr;
+      dispMin = currMin;
+      dispState = DISPSTATECLK;
+      if ((buttonState & (1 << ALMONBUTTON)) == (1 << ALMONBUTTON))
+      {
+        BT_State = D_RunClockAlarmSet_State;
+      }
+      break; //D_RunClockNoAlarmSet_State
+    case D_RunClockAlarmSet_State:
+      dispHr = currHr;
+      dispMin = currMin;
+      dispState = DISPSTATEALM;
+      if (!((buttonState & (1 << ALMONBUTTON)) == (1 << ALMONBUTTON)))
+      {
+        BT_State = D_RunClockNoAlarmSet_State;
+      }
+      break; //D_RunClockAlarmSet_State
+    case D_RunClockAlarmActive_State:
+      break; //D_RunClockAlarmActive_State
+    case D_AdjustTime_State:
+      break; //D_AdjustTime_State
+    case D_AdjustTimeHr_State:
+      break; //AdjustTimeHr_State
+    case D_AdjustTimeMn_State:
+      break; //D_AdjustTimeMn_State
+    case D_AdjustAlarm_State:
+      break; //D_AdjustAlarm_State
+    case D_AdjustAlarmHr_State:
+      break; //D_AdjustAlarmHr_State
+    case D_AdjustAlarmMn_State:
+      break; //D_AdjustAlarmMn_State
+    default:
+      break;
+  }
+  //write global actions
   delay(100);
 }
