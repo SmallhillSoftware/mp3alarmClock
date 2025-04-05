@@ -51,7 +51,7 @@
  * globale Variablen
  ******************************************************************************/
 byte mk_month = 4;
-byte mk_day = 1;
+byte mk_day = 5;
 
 //Variable für Dateinamen anlegen
 //Dateinamen entsprechend 8.3 Format
@@ -87,6 +87,7 @@ byte buttonState = 0;
 
 //state machine
 byte BT_State = D_PowerOff_State;
+byte BT_prevState;
 
 /******************************************************************************
  * Funktionen
@@ -312,6 +313,7 @@ void loop()
   switch (BT_State)
   {
     case D_PowerOff_State:
+      BT_prevState = BT_State; //store previous state
       BT_State = D_ShowVersion_State;
       break; //D_PowerOff_State
     case D_ShowVersion_State:
@@ -319,6 +321,7 @@ void loop()
       dispMin = mk_day;
       dispState = DISPSTATEVER;
       delay(3000); //condition to change to next state
+      BT_prevState = BT_State; //store previous state
       BT_State = D_noTimeYet_State;
       break; //D_ShowVersion_State
     case D_noTimeYet_State:
@@ -328,6 +331,7 @@ void loop()
       //any button pressed
       if (buttonState > 0)
       {
+        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockNoAlarmSet_State;
       }
       break; //D_noTimeYet_State
@@ -335,8 +339,14 @@ void loop()
       dispHr = currHr;
       dispMin = currMin;
       dispState = DISPSTATECLK;
-      if ((buttonState & (1 << ALMONBUTTON)) == (1 << ALMONBUTTON))
+      if ((buttonState & (1 << SETTIMEBUTTON)) == (1 << SETTIMEBUTTON))
       {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustTime_State;
+      }
+      else if ((buttonState & (1 << ALMONBUTTON)) == (1 << ALMONBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockAlarmSet_State;
       }
       break; //D_RunClockNoAlarmSet_State
@@ -344,24 +354,156 @@ void loop()
       dispHr = currHr;
       dispMin = currMin;
       dispState = DISPSTATEALM;
-      if (!((buttonState & (1 << ALMONBUTTON)) == (1 << ALMONBUTTON)))
+      if ((currHr == alarmHr) && (currMin == alarmMin))
       {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_RunClockAlarmActive_State;
+      }
+      else if ((buttonState & (1 << ALMBUTTON)) == (1 << ALMBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustAlarm_State; 
+      }
+      else if (!((buttonState & (1 << ALMONBUTTON)) == (1 << ALMONBUTTON)))
+      {
+        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockNoAlarmSet_State;
       }
       break; //D_RunClockAlarmSet_State
     case D_RunClockAlarmActive_State:
+      dispHr = currHr;
+      dispMin = currMin;
+      dispState = DISPSTATEACT;
+      //play mp3s
+      if ((buttonState & (1 << ALMBUTTON)) == (1 << ALMBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_RunClockAlarmSet_State;
+      }
       break; //D_RunClockAlarmActive_State
     case D_AdjustTime_State:
+      dispHr = 99;
+      dispMin = 99;
+      dispState = DISPSTATECLK;
+      if ((buttonState & (1 << HOURINCBUTTON)) == (1 << HOURINCBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustTimeHr_State;
+      }
+      else if ((buttonState & (1 << MININCBUTTON)) == (1 << MININCBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustTimeMn_State;
+      }
+      else if ((buttonState & (1 << ALMBUTTON)) == (1 << ALMBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_RunClockNoAlarmSet_State;
+      }
       break; //D_AdjustTime_State
     case D_AdjustTimeHr_State:
+      dispHr = currHr;
+      dispMin = 99;
+      dispState = DISPSTATECLK;
+      if ((buttonState & (1 << HOURINCBUTTON)) == (1 << HOURINCBUTTON))
+      {
+        if (currHr < 23)
+        {
+          currHr++;
+        }
+        else
+        {
+          currHr = 0;
+        }
+      }
+      else if ((buttonState & (1 << SETTIMEBUTTON)) == (1 << SETTIMEBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustTime_State;
+      }
       break; //AdjustTimeHr_State
     case D_AdjustTimeMn_State:
+      dispHr = 99;
+      dispMin = currMin;
+      dispState = DISPSTATECLK;
+      if ((buttonState & (1 << MININCBUTTON)) == (1 << MININCBUTTON))
+      {
+        if (currMin < 59)
+        {
+          currMin++;
+        }
+        else
+        {
+          currMin = 0;
+        }
+      }
+      else if ((buttonState & (1 << SETTIMEBUTTON)) == (1 << SETTIMEBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustTime_State;
+      }
       break; //D_AdjustTimeMn_State
     case D_AdjustAlarm_State:
+      dispHr = 99;
+      dispMin = 99;
+      dispState = DISPSTATEALM;
+      if ((buttonState & (1 << HOURINCBUTTON)) == (1 << HOURINCBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustAlarmHr_State;
+      }
+      else if ((buttonState & (1 << MININCBUTTON)) == (1 << MININCBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustAlarmMn_State;
+      }
+      else if ((buttonState & (1 << SETTIMEBUTTON)) == (1 << SETTIMEBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_RunClockAlarmSet_State;
+      }
       break; //D_AdjustAlarm_State
     case D_AdjustAlarmHr_State:
+      dispHr = alarmHr;
+      dispMin = 99;
+      dispState = DISPSTATEALM;
+      if ((buttonState & (1 << HOURINCBUTTON)) == (1 << HOURINCBUTTON))
+      {
+        if (alarmHr < 23)
+        {
+          alarmHr++;
+        }
+        else
+        {
+          alarmHr = 0;
+        }
+      }
+      else if ((buttonState & (1 << ALMBUTTON)) == (1 << ALMBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustAlarm_State;
+      }
       break; //D_AdjustAlarmHr_State
     case D_AdjustAlarmMn_State:
+      dispHr = 99;
+      dispMin = alarmMin;
+      dispState = DISPSTATEALM;
+      if ((buttonState & (1 << MININCBUTTON)) == (1 << MININCBUTTON))
+      {
+        if (alarmMin < 59)
+        {
+          alarmMin++;
+        }
+        else
+        {
+          alarmMin = 0;
+        }
+      }
+      else if ((buttonState & (1 << ALMBUTTON)) == (1 << ALMBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustAlarm_State;
+      }
       break; //D_AdjustAlarmMn_State
     default:
       break;
