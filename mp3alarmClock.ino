@@ -25,6 +25,7 @@
 #define BCDBpin 2
 #define BCDCpin 9
 #define BCDDpin 0
+#define interimResetPin A0
 #define DISPSTATECLK 12 //C
 #define DISPSTATEALM 10 //A
 #define DISPSTATEACT 15 //F
@@ -51,7 +52,7 @@
  * globale Variablen
  ******************************************************************************/
 byte mk_month = 4;
-byte mk_day = 5;
+byte mk_day = 26;
 
 //Variable für Dateinamen anlegen
 //Dateinamen entsprechend 8.3 Format
@@ -92,6 +93,23 @@ byte BT_prevState;
 /******************************************************************************
  * Funktionen
  ******************************************************************************/
+void initSegmentCounter(void)
+{
+  digitalWrite(SEGCLOCKpin, LOW);
+  digitalWrite(interimResetPin, HIGH);
+  for (int i=1; i<=5; i++)
+  {
+    //Generiere 5 Pulse um alle D-flip-flops durchzutakten
+    digitalWrite(SEGCLOCKpin, LOW);
+    delay(50);
+    digitalWrite(SEGCLOCKpin, HIGH);
+    delay(50);
+  }
+  //Reset fuer Segment-Counter zuruecknehmen
+  digitalWrite(interimResetPin, LOW);
+}
+
+
 void writeBcdToSegPins(byte givenNumber, byte upperNibble)
 {
 byte number;
@@ -144,7 +162,7 @@ byte number;
 
 void setup()
 {
-  //Clock pin fuer Johnson-Counter als Ausgang setzen
+  //Clock pin fuer Segment-Counter als Ausgang und Low setzen
   pinMode(SEGCLOCKpin, OUTPUT);
   digitalWrite(SEGCLOCKpin, LOW);
   //BCD-pins fuer D346 als Ausgaenge setzen
@@ -156,6 +174,10 @@ void setup()
   digitalWrite(BCDCpin, LOW);
   pinMode(BCDDpin, OUTPUT);
   digitalWrite(BCDDpin, LOW);
+  //Reset pin fuer Segment-Counter als Ausgang und High fuer Reset active setzen
+  pinMode(interimResetPin, OUTPUT);
+  //Segment-Counter ruecksetzen
+  initSegmentCounter();
   //Alle Interrupts deaktivieren
   noInterrupts();
   //
@@ -181,13 +203,11 @@ void setup()
   //MP3-Decoder initialisieren
   //VS1011.begin();
 
-  //
-  Serial.end();
-
   //Alle Interrupts aktivieren
   interrupts();
-  
+
   Wire.begin();
+  Wire.setWireTimeout(3000 /* us */, true /* reset_on_timeout */);
   MCP.begin();
 
   while(!(MCP.isConnected()))
@@ -249,12 +269,6 @@ ISR(TIMER1_OVF_vect)
   }
   else if (digitToUpdate == 4)
   {
-    writeBcdToSegPins(dispState, 2);
-    digitToUpdate = 5;
-  }
-  else if (digitToUpdate == 5)
-  {
-    //
     writeBcdToSegPins(dispState, 2);
     digitToUpdate = 0;
   }
