@@ -194,14 +194,14 @@ void setup()
       
   //SD-Karte initialisieren
   //SD_CS als parameter übergeben, da hier ChipSelect anders belegt
-  //if( SD.begin( SD_CS ) == false )
-  //{
-      // Programm beenden, da keine SD-Karte vorhanden
-  //  return;
-  //}
+  if( SD.begin( SD_CS ) == false )
+  {
+     // Programm beenden, da keine SD-Karte vorhanden
+     return;
+  }
   
   //MP3-Decoder initialisieren
-  //VS1011.begin();
+  VS1011.begin();
 
   //Alle Interrupts aktivieren
   interrupts();
@@ -282,6 +282,10 @@ ISR(TIMER1_OVF_vect)
 
 void loop()
 {
+//Puffer für MP3-Decoder anlegen
+//MP3-Decoder erwartet Daten immer in 32 Byte Blöcken
+unsigned char buffer[32];
+unsigned int cntr = 0;
   //read in buttons
   if (MCP.read1(ALMBUTTON) == true)
   {
@@ -522,6 +526,30 @@ void loop()
     default:
       break;
   }
-  //write global actions
+  if (BT_State == D_RunClockAlarmActive_State)
+  {
+  	//open file and play it
+    if( File SoundFile = SD.open( filename ) )
+    {
+      VS1011.UnsetMute(); //switch on amplifier
+      //play file till the end
+      while( SoundFile.available() )
+		  {
+			  SoundFile.read( buffer, sizeof(buffer) ); //fill buffer with data from file
+        VS1011.Send32( buffer ); //send buffer data to MP3-decoder
+      }
+      VS1011.Send2048Zeros(); //fill MP3-decoder buffer with zeros
+      VS1011.SetMute(); //switch off amplifier
+	  }
+	  if( filenumber < 99 )
+    {
+      sprintf(filename, "%02d.wav", ++filenumber);
+    }
+    else
+    {
+      filenumber = 0;
+      sprintf(filename, "%02d.wav", ++filenumber);
+    }	
+  } //if (BT_State == D_RunClockAlarmActive_State)
   delay(100);
 }
