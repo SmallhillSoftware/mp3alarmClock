@@ -13,6 +13,7 @@
  ****************************************************/
 
 // include SPI, MP3 and SD libraries
+#include <EEPROM.h>
 #include <SPI.h>
 #include <Adafruit_VS1053.h>
 #include <SD.h>
@@ -39,8 +40,28 @@ char filename[11];
 unsigned char filenumber = 0;
 
 bool bPlayMusic = false;
+int  iEeepromAdrFileHandling = 0;
+bool bFileNrInEeprom;
+byte eepromData;
 
-void setup() {
+void setup()
+{
+  eepromData = EEPROM.read(iEeepromAdrFileHandling);
+  if ((eepromData & 0x80) == 0x80)
+  {
+    bFileNrInEeprom = true;
+    filenumber = (eepromData & 0x7F);
+    if (filenumber > 99)
+    {
+      filenumber = 99;
+    }
+  }
+  else
+  {
+    bFileNrInEeprom = false;
+    filenumber = 0;
+  }
+
   Serial.begin(9600);
   Serial.println("Adafruit VS1053 Library Test");
 
@@ -100,6 +121,8 @@ void loop() {
     if (filenumber < 99)
     {
       filenumber++;
+      eepromData = filenumber + 0x80;
+      EEPROM.update(iEeepromAdrFileHandling, eepromData);
     }
     else
     {
