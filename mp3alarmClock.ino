@@ -1,18 +1,14 @@
 /******************************************************************************
- * Beispiel:      extended
- * 
- * Beschreibung:  	Dieses Beispiel spielt mehrere Dateien nacheinander ab.
- * 				Dateien werden dabei mit fortlaufender Nummer aufgerufen:
- * 				"001.mp3" bis "010.mp3"
- * 				Erweiterte Funktionen zur Erkennung und zum	Schalten der 
- * 				Versorgungsspannung der SD-Karte aktiviert.
- * 				Zur besseren Verständnis werden zusätzliche Ausgaben an 
- * 				den PC geschickt (können in Serial Monitor betrachtet werden).
- * 				
+ * MP3ALARMCLOCK
+ * Drives a 4-digit-7-Segment-LED-display, implements a quarz- or net-frequency
+ * synced clock with possibiliyt to set an alarm time
+ * Plays MP3-files between 00.mp3 and 99.mp3 when the alarm time fires
+ * www.smallhill.de 2025
  ******************************************************************************/
+#include <EEPROM.h>
 #include <SD.h>
 #include <SPI.h>
-#include <AudioShieldMinimal.h>
+#include <Adafruit_VS1053.h>
 #include "MCP23008.h"
 
 /******************************************************************************
@@ -25,7 +21,14 @@
 #define BCDBpin 2
 #define BCDCpin 9
 #define BCDDpin 0
-#define interimResetPin A0
+// These are the pins used for the music maker shield
+#define VS1053RESETpin -1      // VS1053 reset pin (unused!)
+#define VS1053CSpin     7      // VS1053 chip select pin (output)
+#define VS1053DCSpin    6      // VS1053 Data/command select pin (output)
+// These are common pins between breakout and shield
+#define SDCARDCSpin     4      // Card chip select pin
+// DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
+#define VS1053DREQpin   3      // VS1053 Data request, ideally an Interrupt pin
 #define DISPSTATECLK 12 //C
 #define DISPSTATEALM 10 //A
 #define DISPSTATEACT 15 //F
@@ -51,15 +54,23 @@
 /******************************************************************************
  * globale Variablen
  ******************************************************************************/
-byte mk_month = 4;
-byte mk_day = 26;
+byte mk_month = 8;
+byte mk_day = 3;
+
+Adafruit_VS1053_FilePlayer musicPlayer = 
+  // create shield-example object!
+  Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
 //Variable für Dateinamen anlegen
 //Dateinamen entsprechend 8.3 Format
-char filename[13] = "01.wav";
+char filename[12];
 
 //Zähler für Dateien
-unsigned char filenumber = 1;
+unsigned char filenumber = 0;
+bool bPlayMusic = false;
+int  iEeepromAdrFileHandling = 0;
+bool bFileNrInEeprom;
+byte eepromData;
 
 //clock variables
 byte currHr = 12;
@@ -84,7 +95,11 @@ MCP23008 MCP(0x20);
 #define HOURINCBUTTON 2
 #define MININCBUTTON  3
 #define ALMONBUTTON   4
+#define MID_LEDS_OUT  5
+#define D2_DP_OUT     6
+#define OE_RESET_OUT  7
 byte buttonState = 0;
+bool midLedState = 0;
 
 //state machine
 byte BT_State = D_PowerOff_State;
@@ -96,7 +111,7 @@ byte BT_prevState;
 void initSegmentCounter(void)
 {
   digitalWrite(SEGCLOCKpin, LOW);
-  digitalWrite(interimResetPin, HIGH);
+  MCP.write1(OE_RESET_OUT, HIGH);
   for (int i=1; i<=5; i++)
   {
     //Generiere 5 Pulse um alle D-flip-flops durchzutakten
@@ -106,7 +121,7 @@ void initSegmentCounter(void)
     delay(50);
   }
   //Reset fuer Segment-Counter zuruecknehmen
-  digitalWrite(interimResetPin, LOW);
+  MCP.write1(OE_RESET_OUT, LOW);
 }
 
 
@@ -174,8 +189,6 @@ void setup()
   digitalWrite(BCDCpin, LOW);
   pinMode(BCDDpin, OUTPUT);
   digitalWrite(BCDDpin, LOW);
-  //Reset pin fuer Segment-Counter als Ausgang und High fuer Reset active setzen
-  pinMode(interimResetPin, OUTPUT);
   //Segment-Counter ruecksetzen
   initSegmentCounter();
   //Alle Interrupts deaktivieren
@@ -191,20 +204,42 @@ void setup()
   TCCR1B |= (1 << CS11);
   //Enable timer overflow interrupt
   TIMSK1 |= (1 << TOIE1);
-      
-  //SD-Karte initialisieren
-  //SD_CS als parameter übergeben, da hier ChipSelect anders belegt
-  if( SD.begin( SD_CS ) == false )
+  //Alle Interrupts aktivieren
+  interrupts();    
+  
+  //
+  eepromData = EEPROM.read(iEeepromAdrFileHandling);
+  if ((eepromData & 0x80) == 0x80)
   {
-     // Programm beenden, da keine SD-Karte vorhanden
-     return;
+    bFileNrInEeprom = true;
+    filenumber = (eepromData & 0x7F);
+    if (filenumber > 99)
+    {
+      filenumber = 99;
+    }
+  }
+  else
+  {
+    bFileNrInEeprom = false;
+    filenumber = 0;
   }
   
   //MP3-Decoder initialisieren
-  VS1011.begin();
+  musicPlayer.begin();
+  
+  //SD-Karte initialisieren
+  //SD_CS als parameter übergeben, da hier ChipSelect anders belegt
+  SD.begin(SDCARDCSpin);
+  
+  // Set volume for left, right channels. lower numbers == louder volume!
+  musicPlayer.setVolume(20,20);
 
-  //Alle Interrupts aktivieren
-  interrupts();
+  // This option uses a pin interrupt. No timers required! But DREQ
+  // must be on an interrupt pin. For Uno/Duemilanove/Diecimilla
+  // that's Digital #2 or #3
+  // See http://arduino.cc/en/Reference/attachInterrupt for other pins
+  // *** This method is preferred
+  musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);
 
   Wire.begin();
   Wire.setWireTimeout(3000 /* us */, true /* reset_on_timeout */);
@@ -216,7 +251,7 @@ void setup()
     //verbindet aber nicht
   }
   
-  MCP.pinMode8(0xFF);
+  MCP.pinMode8(0x1F); //upper 3 pins are output
 }
 
 
@@ -226,7 +261,9 @@ ISR(TIMER1_OVF_vect)
   //1 minute passed, 500 occurrences of 2ms = 1sec and 60 of them means 1 min
   if (twoMSecs == (500 * 60))
   {
-    twoMSecs = 0;
+    twoMSecs = 0; //reset 2ms counter value
+    MCP.write1(MID_LEDS_OUT, midLedState); //write midLedState to MID_LEDS_Out-port on MCP23008
+    midLedState =~ midLedState; //toggle midLedState
     if (currMin < 59)
     {
       currMin++;
@@ -284,8 +321,10 @@ void loop()
 {
 //Puffer für MP3-Decoder anlegen
 //MP3-Decoder erwartet Daten immer in 32 Byte Blöcken
-unsigned char buffer[32];
 unsigned int cntr = 0;
+  //build file name
+  sprintf(filename, "/%02d.mp3", filenumber);
+  
   //read in buttons
   if (MCP.read1(ALMBUTTON) == true)
   {
@@ -395,6 +434,8 @@ unsigned int cntr = 0;
       //play mp3s
       if ((buttonState & (1 << ALMBUTTON)) == (1 << ALMBUTTON))
       {
+        eepromData = filenumber + 0x80;
+        EEPROM.update(iEeepromAdrFileHandling, eepromData);
         BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockAlarmSet_State;
       }
@@ -528,28 +569,21 @@ unsigned int cntr = 0;
   }
   if (BT_State == D_RunClockAlarmActive_State)
   {
-  	//open file and play it
-    if( File SoundFile = SD.open( filename ) )
+    if (!bPlayMusic)
     {
-      VS1011.UnsetMute(); //switch on amplifier
-      //play file till the end
-      while( SoundFile.available() )
-		  {
-			  SoundFile.read( buffer, sizeof(buffer) ); //fill buffer with data from file
-        VS1011.Send32( buffer ); //send buffer data to MP3-decoder
+      musicPlayer.startPlayingFile(filename);
+    } //if (!bPlayMusic)
+    bPlayMusic = musicPlayer.playingMusic;
+    if (!bPlayMusic)
+    {
+      if (filenumber < 99)
+      {
+        filenumber++;
       }
-      VS1011.Send2048Zeros(); //fill MP3-decoder buffer with zeros
-      VS1011.SetMute(); //switch off amplifier
-	  }
-	  if( filenumber < 99 )
-    {
-      sprintf(filename, "%02d.wav", ++filenumber);
-    }
-    else
-    {
-      filenumber = 0;
-      sprintf(filename, "%02d.wav", ++filenumber);
-    }	
+    	else
+    	{
+        filenumber = 0;
+    	}
+    } //if (!bPlayMusic)
   } //if (BT_State == D_RunClockAlarmActive_State)
-  delay(100);
 }
