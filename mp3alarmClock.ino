@@ -1,3 +1,5 @@
+#include <LiquidCrystal.h>
+
 /******************************************************************************
  * Beispiel:      extended
  * 
@@ -414,9 +416,9 @@ void loop()
       BT_dispState = D_DISPSTATEVER;
       delay(3000); //condition to change to next state
       BT_prevState = BT_State; //store previous state
-      if (B_timeFromRtc)
+      if (B_timeFromRtc == true)
       {
-        if ((B_alarmHrInEeprom) && (B_alarmMinInEeprom))
+        if ((B_alarmHrInEeprom == true) && (B_alarmMinInEeprom == true))
         {
           BT_State = D_RunClockNoAlarmSet_State;
         }
@@ -437,7 +439,7 @@ void loop()
       if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
       {
         BT_prevState = BT_State; //store previous state
-        if ((B_alarmHrInEeprom) && (B_alarmMinInEeprom))
+        if ((B_alarmHrInEeprom == true) && (B_alarmMinInEeprom == true))
         {
           BT_State = D_RunClockNoAlarmSet_State;
         }
@@ -461,12 +463,7 @@ void loop()
       BT_dispHr = BT_currHr;
       BT_dispMin = BT_currMin;
       BT_dispState = D_DISPSTATECLK;
-      if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustTime_State;
-      }
-      else if ((BT_buttonState & (1 << D_ALMONBUTTON)) == (1 << D_ALMONBUTTON))
+      if ((BT_buttonState & (1 << D_ALMONBUTTON)) == (1 << D_ALMONBUTTON))
       {
         BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockAlarmSet_State;
@@ -480,11 +477,6 @@ void loop()
       {
         BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockAlarmActive_State;
-      }
-      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustAlarm_State; 
       }
       else if (!((BT_buttonState & (1 << D_ALMONBUTTON)) == (1 << D_ALMONBUTTON)))
       {
@@ -503,130 +495,6 @@ void loop()
         BT_State = D_RunClockAlarmSet_State;
       }
       break; //D_RunClockAlarmActive_State
-    case D_AdjustTime_State:
-      BT_dispHr = 99;
-      BT_dispMin = 99;
-      BT_dispState = D_DISPSTATECLK;
-      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustTimeHr_State;
-      }
-      else if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustTimeMn_State;
-      }
-      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_RunClockNoAlarmSet_State;
-      }
-      break; //D_AdjustTime_State
-    case D_AdjustTimeHr_State:
-      BT_dispHr = BT_currHr;
-      BT_dispMin = 99;
-      BT_dispState = D_DISPSTATECLK;
-      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
-      {
-        if (BT_currHr < 23)
-        {
-          BT_currHr++;
-        }
-        else
-        {
-          BT_currHr = 0;
-        }
-      }
-      else if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustTime_State;
-      }
-      break; //AdjustTimeHr_State
-    case D_AdjustTimeMn_State:
-      BT_dispHr = 99;
-      BT_dispMin = BT_currMin;
-      BT_dispState = D_DISPSTATECLK;
-      if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
-      {
-        if (BT_currMin < 59)
-        {
-          BT_currMin++;
-        }
-        else
-        {
-          BT_currMin = 0;
-        }
-      }
-      else if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustTime_State;
-      }
-      break; //D_AdjustTimeMn_State
-    case D_AdjustAlarm_State:
-      BT_dispHr = 99;
-      BT_dispMin = 99;
-      BT_dispState = D_DISPSTATEALM;
-      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustAlarmHr_State;
-      }
-      else if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustAlarmMn_State;
-      }
-      else if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_RunClockAlarmSet_State;
-      }
-      break; //D_AdjustAlarm_State
-    case D_AdjustAlarmHr_State:
-      BT_dispHr = BT_alarmHr;
-      BT_dispMin = 99;
-      BT_dispState = D_DISPSTATEALM;
-      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
-      {
-        if (BT_alarmHr < 23)
-        {
-          BT_alarmHr++;
-        }
-        else
-        {
-          BT_alarmHr = 0;
-        }
-      }
-      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustAlarm_State;
-      }
-      break; //D_AdjustAlarmHr_State
-    case D_AdjustAlarmMn_State:
-      BT_dispHr = 99;
-      BT_dispMin = BT_alarmMin;
-      BT_dispState = D_DISPSTATEALM;
-      if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
-      {
-        if (BT_alarmMin < 59)
-        {
-          BT_alarmMin++;
-        }
-        else
-        {
-          BT_alarmMin = 0;
-        }
-      }
-      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
-      {
-        BT_prevState = BT_State; //store previous state
-        BT_State = D_AdjustAlarm_State;
-      }
-      break; //D_AdjustAlarmMn_State
     default:
       break;
   }
