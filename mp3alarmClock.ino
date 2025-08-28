@@ -1,33 +1,34 @@
-#include <LiquidCrystal.h>
-
 /******************************************************************************
- * Beispiel:      extended
- * 
- * Beschreibung:  	Dieses Beispiel spielt mehrere Dateien nacheinander ab.
- * 				Dateien werden dabei mit fortlaufender Nummer aufgerufen:
- * 				"001.mp3" bis "010.mp3"
- * 				Erweiterte Funktionen zur Erkennung und zum	Schalten der 
- * 				Versorgungsspannung der SD-Karte aktiviert.
- * 				Zur besseren Verständnis werden zusätzliche Ausgaben an 
- * 				den PC geschickt (können in Serial Monitor betrachtet werden).
- * 				
+ * MP3ALARMCLOCK
+ * Drives a 4-digit-7-Segment-LED-display, implements a quarz- or net-frequency
+ * synced clock with possibility to set an alarm time
+ * Plays MP3-files between 00.mp3 and 99.mp3 when the alarm time fires
+ * www.smallhill.de 2025
  ******************************************************************************/
 #include <EEPROM.h>
-#include <SD.h>
-#include <SPI.h>
-#include <AudioShieldMinimal.h>
 #include "MCP23008.h"
 
 /******************************************************************************
  * globale Defines
  ******************************************************************************/
-#define D_SEGCLOCKpin 10
 //#define D_RELOADvalFor20ms 25536
 #define D_RELOADvalFor2ms 61535
-#define D_BCDApin 1
-#define D_BCDBpin 2
-#define D_BCDCpin 9
-#define D_BCDDpin 0
+#define D_mp3Clock 0
+#if (D_mp3Clock)
+  //pinning for for MP3-clock
+  #define D_SEGCLOCKpin 0
+  #define D_BCDApin 1
+  #define D_BCDBpin 9
+  #define D_BCDCpin 10
+  #define D_BCDDpin A1
+#else
+  //pinning for Arduino Uno Adapter but not for MP3-clock
+  #define D_SEGCLOCKpin 10
+  #define D_BCDApin 1
+  #define D_BCDBpin 2
+  #define D_BCDCpin 9
+  #define D_BCDDpin 0
+#endif
 #define D_DISPSTATECLK 12 //C
 #define D_DISPSTATEALM 10 //A
 #define D_DISPSTATEACT 15 //F
@@ -60,7 +61,7 @@
  * globale Variablen
  ******************************************************************************/
 byte BT_mk_month = 8;
-byte BT_mk_day = 26;
+byte BT_mk_day = 28;
 
 bool BL_setupFinished = false;
 
@@ -272,7 +273,7 @@ byte bt_eepromData;
 
   Wire.begin();
   Wire.setWireTimeout(3000 /* us */, true /* reset_on_timeout */);
-  MCP.begin();
+  MCP.begin(false);
 
   while(!(MCP.isConnected()))
   {
@@ -280,7 +281,34 @@ byte bt_eepromData;
     //verbindet aber nicht
   }
   
-  MCP.pinMode8(0x1F); //upper 3 bits are outputs
+  //MCP.pinMode8(0x1F); //upper 3 bits are outputs
+  MCP.pinMode1(D_ALMBUTTON, INPUT);
+  MCP.pinMode1(D_SETTIMEBUTTON, INPUT);
+  MCP.pinMode1(D_HOURINCBUTTON, INPUT);
+  MCP.pinMode1(D_MININCBUTTON, INPUT);
+  MCP.pinMode1(D_ALMONBUTTON, INPUT);
+  MCP.pinMode1(D_MID_LEDS_OUT, OUTPUT);
+  MCP.pinMode1(D_D2_DP_OUT, OUTPUT);
+  MCP.pinMode1(D_OE_RESET_OUT, OUTPUT);
+  
+  MCP.setPolarity(D_ALMBUTTON, 0);
+  MCP.setPolarity(D_SETTIMEBUTTON, 0);
+  MCP.setPolarity(D_HOURINCBUTTON, 0);
+  MCP.setPolarity(D_MININCBUTTON, 0);
+  MCP.setPolarity(D_ALMONBUTTON, 0);
+  MCP.setPolarity(D_MID_LEDS_OUT, 0);
+  MCP.setPolarity(D_D2_DP_OUT, 0);
+  MCP.setPolarity(D_OE_RESET_OUT, 0);
+
+  MCP.setPullup(D_ALMBUTTON, 0);
+  MCP.setPullup(D_SETTIMEBUTTON, 0);
+  MCP.setPullup(D_HOURINCBUTTON, 0);
+  MCP.setPullup(D_MININCBUTTON, 0);
+  MCP.setPullup(D_ALMONBUTTON, 0);
+  MCP.setPullup(D_MID_LEDS_OUT, 0);
+  MCP.setPullup(D_D2_DP_OUT, 0);
+  MCP.setPullup(D_OE_RESET_OUT, 0);
+  
   initSegmentCounter(); //reset segment counter in GAL
 
   MCP.write1(D_MID_LEDS_OUT, HIGH); //klappt
@@ -372,6 +400,7 @@ ISR(TIMER1_OVF_vect)
 
 void loop()
 {
+byte bt_eepromData;
   if (BL_midLedState == true)
   {
     MCP.write1(D_D2_DP_OUT, LOW);
@@ -382,23 +411,23 @@ void loop()
   }
   //read in buttons
   BT_buttonState = 0;
-  if (MCP.read1(D_ALMBUTTON))
+  if (MCP.read1(D_ALMBUTTON) == HIGH)
   {
     BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMBUTTON)) & 0xFF);
   }
-  if (MCP.read1(D_SETTIMEBUTTON))
+  if (MCP.read1(D_SETTIMEBUTTON) == HIGH)
   {
     BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_SETTIMEBUTTON)) & 0xFF);
   }
-  if (MCP.read1(D_HOURINCBUTTON))
+  if (MCP.read1(D_HOURINCBUTTON) == HIGH)
   {
     BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_HOURINCBUTTON)) & 0xFF);
   }
-  if (MCP.read1(D_MININCBUTTON))
+  if (MCP.read1(D_MININCBUTTON) == HIGH)
   {
     BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_MININCBUTTON)) & 0xFF);
   }
-  if (MCP.read1(D_ALMONBUTTON))
+  if (MCP.read1(D_ALMONBUTTON) == HIGH)
   {
     BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMONBUTTON)) & 0xFF);
   }
@@ -415,7 +444,6 @@ void loop()
       BT_dispMin = BT_mk_day;
       BT_dispState = D_DISPSTATEVER;
       delay(3000); //condition to change to next state
-      BT_prevState = BT_State; //store previous state
       if (B_timeFromRtc == true)
       {
         if ((B_alarmHrInEeprom == true) && (B_alarmMinInEeprom == true))
@@ -438,7 +466,6 @@ void loop()
       BT_dispState = D_DISPSTATECLK;
       if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
       {
-        BT_prevState = BT_State; //store previous state
         if ((B_alarmHrInEeprom == true) && (B_alarmMinInEeprom == true))
         {
           BT_State = D_RunClockNoAlarmSet_State;
@@ -452,10 +479,9 @@ void loop()
     case D_noAlarmTimeYet_State:
       BT_dispHr = 99;
       BT_dispMin = 99;
-      BT_dispState = D_DISPSTATECLK;
+      BT_dispState = D_DISPSTATEALM;
       if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
       {
-        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockNoAlarmSet_State;
       }
       break; //D_noAlarmTimeYet_State
@@ -463,9 +489,16 @@ void loop()
       BT_dispHr = BT_currHr;
       BT_dispMin = BT_currMin;
       BT_dispState = D_DISPSTATECLK;
-      if ((BT_buttonState & (1 << D_ALMONBUTTON)) == (1 << D_ALMONBUTTON))
+      //wenn ich diese Bedingung rausnehme dann wechselt er nicht mehr in den Einstellmodus
+      //wenn ich dann aber den Alarmzustand aktiviere wechselt er in den Einstellmodus und
+      //alles blinkt
+      if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
       {
         BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustTime_State;
+      }
+      else if ((BT_buttonState & (1 << D_ALMONBUTTON)) == (1 << D_ALMONBUTTON))
+      {
         BT_State = D_RunClockAlarmSet_State;
       }
       break; //D_RunClockNoAlarmSet_State
@@ -475,12 +508,15 @@ void loop()
       BT_dispState = D_DISPSTATEALM;
       if ((BT_currHr == BT_alarmHr) && (BT_currMin == BT_alarmMin))
       {
-        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockAlarmActive_State;
+      }
+      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
+      {
+        BT_prevState = BT_State; //store previous state
+        BT_State = D_AdjustAlarm_State; 
       }
       else if (!((BT_buttonState & (1 << D_ALMONBUTTON)) == (1 << D_ALMONBUTTON)))
       {
-        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockNoAlarmSet_State;
       }
       break; //D_RunClockAlarmSet_State
@@ -491,10 +527,148 @@ void loop()
       //play mp3s
       if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
       {
-        BT_prevState = BT_State; //store previous state
         BT_State = D_RunClockAlarmSet_State;
       }
       break; //D_RunClockAlarmActive_State
+    case D_AdjustTime_State:
+      BT_dispHr = 77;
+      BT_dispMin = 77;
+      BT_dispState = D_DISPSTATECLK;
+      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
+      {
+        BT_State = D_AdjustTimeHr_State;
+      }
+      else if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
+      {
+        BT_State = D_AdjustTimeMn_State;
+      }
+      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
+      {
+        if (BT_prevState == D_RunClockAlarmSet_State)
+        {
+          BT_State = D_RunClockAlarmSet_State;
+        }
+        else
+        {
+          BT_State = D_RunClockNoAlarmSet_State;
+        }
+      }
+      break; //D_AdjustTime_State
+    case D_AdjustTimeHr_State:
+      BT_dispHr = BT_currHr;
+      BT_dispMin = 77;
+      BT_dispState = D_DISPSTATECLK;
+      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
+      {
+        if (BT_currHr < 23)
+        {
+          BT_currHr++;
+        }
+        else
+        {
+          BT_currHr = 0;
+        }
+      }
+      else if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
+      {
+        BT_State = D_AdjustTime_State;
+      }
+      break; //AdjustTimeHr_State
+    case D_AdjustTimeMn_State:
+      BT_dispHr = 77;
+      BT_dispMin = BT_currMin;
+      BT_dispState = D_DISPSTATECLK;
+      if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
+      {
+        if (BT_currMin < 59)
+        {
+          BT_currMin++;
+        }
+        else
+        {
+          BT_currMin = 0;
+        }
+      }
+      else if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
+      {
+        BT_State = D_AdjustTime_State;
+      }
+      break; //D_AdjustTimeMn_State
+    case D_AdjustAlarm_State:
+      BT_dispHr = 99;
+      BT_dispMin = 99;
+      BT_dispState = D_DISPSTATEALM;
+      //ob ich diese Bedingung rauskommentiere oder drinlasse macht keinen Unterschied
+      //er wechselt in den Einstell-Flacker-Modus
+      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
+      {
+        BT_State = D_AdjustAlarmHr_State;
+      }
+      //ob ich diese Bedingung rauskommentiere oder drinlasse macht keinen Unterschied
+      //er wechselt in den Einstell-Flacker-Modus
+      else if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
+      {
+        BT_State = D_AdjustAlarmMn_State;
+      }
+      //wenn ich diese Bedingungs auskommentiere wechselt er nicht mehr in den
+      //Einstell-Flacker-Modus
+      else if ((BT_buttonState & (1 << D_SETTIMEBUTTON)) == (1 << D_SETTIMEBUTTON))
+      {
+        //write Alarm Hour and Minute to EEPROM
+        bt_eepromData = BT_alarmHr + 0x80;
+        EEPROM.update(D_eepromAdrAlarmHr, bt_eepromData);
+        bt_eepromData = BT_alarmMin + 0x80;
+        EEPROM.update(D_eepromAdrAlarmMin, bt_eepromData);
+        if (BT_prevState == D_RunClockAlarmSet_State)
+        {
+          BT_State = D_RunClockAlarmSet_State;
+        }
+        else
+        {
+          BT_State = D_RunClockNoAlarmSet_State;
+        }
+      }
+      break; //D_AdjustAlarm_State
+    case D_AdjustAlarmHr_State:
+      BT_dispHr = BT_alarmHr;
+      BT_dispMin = 99;
+      BT_dispState = D_DISPSTATEALM;
+      if ((BT_buttonState & (1 << D_HOURINCBUTTON)) == (1 << D_HOURINCBUTTON))
+      {
+        if (BT_alarmHr < 23)
+        {
+          BT_alarmHr++;
+        }
+        else
+        {
+          BT_alarmHr = 0;
+        }
+      }
+      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
+      {
+        BT_State = D_AdjustAlarm_State;
+      }
+      break; //D_AdjustAlarmHr_State
+    case D_AdjustAlarmMn_State:
+      BT_dispHr = 99;
+      BT_dispMin = BT_alarmMin;
+      BT_dispState = D_DISPSTATEALM;
+      if ((BT_buttonState & (1 << D_MININCBUTTON)) == (1 << D_MININCBUTTON))
+      {
+        if (BT_alarmMin < 59)
+        {
+          BT_alarmMin++;
+        }
+        else
+        {
+          BT_alarmMin = 0;
+        }
+      }
+      else if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
+      {
+        BT_State = D_AdjustAlarm_State;
+      }
+      break; //D_AdjustAlarmMn_State
     default:
       break;
   }
