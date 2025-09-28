@@ -1,34 +1,19 @@
 /******************************************************************************
  * MP3ALARMCLOCK
  * Drives a 4-digit-7-Segment-LED-display, implements a quarz- or net-frequency
-<<<<<<< HEAD
- * synced clock with possibiliyt to set an alarm time
-=======
  * synced clock with possibility to set an alarm time
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
  * Plays MP3-files between 00.mp3 and 99.mp3 when the alarm time fires
  * www.smallhill.de 2025
  ******************************************************************************/
 #include <EEPROM.h>
-<<<<<<< HEAD
 #include <SD.h>
 #include <SPI.h>
 #include <Adafruit_VS1053.h>
-=======
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
 #include "MCP23008.h"
 
 /******************************************************************************
  * globale Defines
  ******************************************************************************/
-<<<<<<< HEAD
-#define SEGCLOCKpin 10
-//#define RELOADvalFor20ms 25536
-#define RELOADvalFor2ms 61535
-#define BCDApin 1
-#define BCDBpin 2
-#define BCDCpin 9
-#define BCDDpin 0
 // These are the pins used for the music maker shield
 #define VS1053RESETpin -1      // VS1053 reset pin (unused!)
 #define VS1053CSpin     7      // VS1053 chip select pin (output)
@@ -37,16 +22,9 @@
 #define SDCARDCSpin     4      // Card chip select pin
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define VS1053DREQpin   3      // VS1053 Data request, ideally an Interrupt pin
-#define DISPSTATECLK 12 //C
-#define DISPSTATEALM 10 //A
-#define DISPSTATEACT 15 //F
-#define DISPSTATEVER 11 //b
-#define DISPSTATE_TST2 13 //d
-#define DISPSTATE_TST3 14 //e
-=======
 //#define D_RELOADvalFor20ms 25536
 #define D_RELOADvalFor2ms 61535
-#define D_mp3Clock 0
+#define D_mp3Clock 1
 #if (D_mp3Clock)
   //pinning for for MP3-clock
   #define D_SEGCLOCKpin 0
@@ -68,8 +46,6 @@
 #define D_DISPSTATEVER 11 //b
 #define D_DISPSTATE_TST2 13 //d
 #define D_DISPSTATE_TST3 14 //e
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
-
 
 #define D_PowerOff_State             0
 #define D_ShowVersion_State          1
@@ -94,30 +70,14 @@
 /******************************************************************************
  * globale Variablen
  ******************************************************************************/
-<<<<<<< HEAD
-byte mk_month = 8;
-byte mk_day = 3;
-
 Adafruit_VS1053_FilePlayer musicPlayer = 
   // create shield-example object!
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
-//Variable für Dateinamen anlegen
-//Dateinamen entsprechend 8.3 Format
-char filename[12];
-
-//Zähler für Dateien
-unsigned char filenumber = 0;
-bool bPlayMusic = false;
-int  iEeepromAdrFileHandling = 0;
-bool bFileNrInEeprom;
-byte eepromData;
-=======
-byte BT_mk_month = 8;
-byte BT_mk_day = 28;
+byte BT_mk_month = 9;
+byte BT_mk_day = 27;
 
 bool BL_setupFinished = false;
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
 
 //clock variables
 byte BT_currHr = 12;
@@ -138,18 +98,7 @@ int INT_digitToUpdate = 0;
 
 //i2c-port-extender
 MCP23008 MCP(0x20);
-<<<<<<< HEAD
-#define ALMBUTTON     0
-#define SETTIMEBUTTON 1
-#define HOURINCBUTTON 2
-#define MININCBUTTON  3
-#define ALMONBUTTON   4
-#define MID_LEDS_OUT  5
-#define D2_DP_OUT     6
-#define OE_RESET_OUT  7
-byte buttonState = 0;
-bool midLedState = 0;
-=======
+
 #define D_ALMBUTTON     0
 #define D_SETTIMEBUTTON 1
 #define D_HOURINCBUTTON 2
@@ -160,7 +109,6 @@ bool midLedState = 0;
 #define D_OE_RESET_OUT  7
 byte BT_buttonState = 0;
 bool BL_midLedState = false;
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
 
 //state machine
 byte BT_State = D_PowerOff_State;
@@ -179,21 +127,20 @@ bool B_alarmHrInEeprom;
 unsigned char UC_storedAlarmMin = 0;
 bool B_alarmMinInEeprom;
 
+//file name for MP3-files to play in 8.3-format
+char C_filename[12];
+
+//indicator if currently MP3s are played
+bool B_playMusic = false;
 
 /******************************************************************************
  * Funktionen
  ******************************************************************************/
 void initSegmentCounter(void)
 {
-<<<<<<< HEAD
-  digitalWrite(SEGCLOCKpin, LOW);
-  MCP.write1(OE_RESET_OUT, HIGH);
-  for (int i=1; i<=5; i++)
-=======
   digitalWrite(D_SEGCLOCKpin, LOW);
   MCP.write1(D_OE_RESET_OUT, HIGH);
   for (int i=0; i<5; i++)
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
   {
     //Generiere 5 Pulse um alle D-flip-flops durchzutakten
     digitalWrite(D_SEGCLOCKpin, LOW);
@@ -202,11 +149,7 @@ void initSegmentCounter(void)
     delay(50);
   }
   //Reset fuer Segment-Counter zuruecknehmen
-<<<<<<< HEAD
-  MCP.write1(OE_RESET_OUT, LOW);
-=======
   MCP.write1(D_OE_RESET_OUT, LOW);
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
 }
 
 
@@ -267,18 +210,6 @@ byte bt_eepromData;
   pinMode(D_SEGCLOCKpin, OUTPUT);
   digitalWrite(D_SEGCLOCKpin, LOW);
   //BCD-pins fuer D346 als Ausgaenge setzen
-<<<<<<< HEAD
-  pinMode(BCDApin, OUTPUT);
-  digitalWrite(BCDApin, LOW);
-  pinMode(BCDBpin, OUTPUT);
-  digitalWrite(BCDBpin, LOW);
-  pinMode(BCDCpin, OUTPUT);
-  digitalWrite(BCDCpin, LOW);
-  pinMode(BCDDpin, OUTPUT);
-  digitalWrite(BCDDpin, LOW);
-  //Segment-Counter ruecksetzen
-  initSegmentCounter();
-=======
   pinMode(D_BCDApin, OUTPUT);
   digitalWrite(D_BCDApin, LOW);
   pinMode(D_BCDBpin, OUTPUT);
@@ -344,7 +275,6 @@ byte bt_eepromData;
   //get time from battery backed-up RTC
   B_timeFromRtc = false;
   
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
   //Alle Interrupts deaktivieren
   noInterrupts();
   //
@@ -359,26 +289,8 @@ byte bt_eepromData;
   //Enable timer overflow interrupt
   TIMSK1 |= (1 << TOIE1);
   //Alle Interrupts aktivieren
-<<<<<<< HEAD
-  interrupts();    
-  
-  //
-  eepromData = EEPROM.read(iEeepromAdrFileHandling);
-  if ((eepromData & 0x80) == 0x80)
-  {
-    bFileNrInEeprom = true;
-    filenumber = (eepromData & 0x7F);
-    if (filenumber > 99)
-    {
-      filenumber = 99;
-    }
-  }
-  else
-  {
-    bFileNrInEeprom = false;
-    filenumber = 0;
-  }
-  
+  interrupts();
+      
   //MP3-Decoder initialisieren
   musicPlayer.begin();
   
@@ -395,9 +307,6 @@ byte bt_eepromData;
   // See http://arduino.cc/en/Reference/attachInterrupt for other pins
   // *** This method is preferred
   musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);
-=======
-  interrupts();
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
 
   Wire.begin();
   Wire.setWireTimeout(3000 /* us */, true /* reset_on_timeout */);
@@ -409,9 +318,6 @@ byte bt_eepromData;
     //verbindet aber nicht
   }
   
-<<<<<<< HEAD
-  MCP.pinMode8(0x1F); //upper 3 pins are output
-=======
   //MCP.pinMode8(0x1F); //upper 3 bits are outputs
   MCP.pinMode1(D_ALMBUTTON, INPUT);
   MCP.pinMode1(D_SETTIMEBUTTON, INPUT);
@@ -447,7 +353,6 @@ byte bt_eepromData;
   
   //signalize that the setup routine is finished
   BL_setupFinished = true;
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
 }
 
 
@@ -457,15 +362,8 @@ ISR(TIMER1_OVF_vect)
   //code to be executed when setup-routine is finished only
   if (BL_setupFinished)
   {
-<<<<<<< HEAD
-    twoMSecs = 0; //reset 2ms counter value
-    MCP.write1(MID_LEDS_OUT, midLedState); //write midLedState to MID_LEDS_Out-port on MCP23008
-    midLedState =~ midLedState; //toggle midLedState
-    if (currMin < 59)
-=======
     //1sec passed
     if (UI_twoMSecs == 500)
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
     {
       UI_twoMSecs = 0;
       UI_seconds++;
@@ -539,14 +437,10 @@ ISR(TIMER1_OVF_vect)
 
 void loop()
 {
-<<<<<<< HEAD
-//Puffer für MP3-Decoder anlegen
-//MP3-Decoder erwartet Daten immer in 32 Byte Blöcken
 unsigned int cntr = 0;
-  //build file name
-  sprintf(filename, "/%02d.mp3", filenumber);
+//build file name
+sprintf(C_filename, "/%02d.mp3", UC_filenumber);
   
-=======
 byte bt_eepromData;
   if (BL_midLedState == true)
   {
@@ -556,7 +450,6 @@ byte bt_eepromData;
   {
     MCP.write1(D_D2_DP_OUT, HIGH);
   }
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
   //read in buttons
   BT_buttonState = 0;
   if (MCP.read1(D_ALMBUTTON) == HIGH)
@@ -675,12 +568,8 @@ byte bt_eepromData;
       //play mp3s
       if ((BT_buttonState & (1 << D_ALMBUTTON)) == (1 << D_ALMBUTTON))
       {
-<<<<<<< HEAD
-        eepromData = filenumber + 0x80;
-        EEPROM.update(iEeepromAdrFileHandling, eepromData);
-        BT_prevState = BT_State; //store previous state
-=======
->>>>>>> 214895c9f6e211e159d16cd80557541c0d23d0f2
+        bt_eepromData = UC_filenumber + 0x80;
+        EEPROM.update(D_eepromAdrFileHandling, bt_eepromData);
         BT_State = D_RunClockAlarmSet_State;
       }
       break; //D_RunClockAlarmActive_State
@@ -828,21 +717,22 @@ byte bt_eepromData;
   }
   if (BT_State == D_RunClockAlarmActive_State)
   {
-    if (!bPlayMusic)
+    if (!B_playMusic)
     {
-      musicPlayer.startPlayingFile(filename);
-    } //if (!bPlayMusic)
-    bPlayMusic = musicPlayer.playingMusic;
-    if (!bPlayMusic)
+      musicPlayer.startPlayingFile(C_filename);
+    } //if (!B_playMusic)
+    B_playMusic = musicPlayer.playingMusic;
+    if (!B_playMusic)
     {
-      if (filenumber < 99)
+      if (UC_filenumber < 99)
       {
-        filenumber++;
+        UC_filenumber++;
       }
     	else
     	{
-        filenumber = 0;
+        UC_filenumber = 0;
     	}
-    } //if (!bPlayMusic)
+    } //if (!B_playMusic)
   } //if (BT_State == D_RunClockAlarmActive_State)
+  delay(100);
 }
