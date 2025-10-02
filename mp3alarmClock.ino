@@ -23,7 +23,7 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define VS1053DREQpin   3      // VS1053 Data request, ideally an Interrupt pin
 //#define D_RELOADvalFor20ms 25536
-#define D_RELOADvalFor2ms 61535
+#define D_RELOADvalFor2ms 61537
 #define D_mp3Clock 1
 #if (D_mp3Clock)
   //pinning for for MP3-clock
@@ -75,7 +75,7 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
 byte BT_mk_month = 9;
-byte BT_mk_day = 27;
+byte BT_mk_day = 28;
 
 bool BL_setupFinished = false;
 
@@ -299,7 +299,7 @@ byte bt_eepromData;
   SD.begin(SDCARDCSpin);
   
   // Set volume for left, right channels. lower numbers == louder volume!
-  musicPlayer.setVolume(20,20);
+  musicPlayer.setVolume(30,30);
 
   // This option uses a pin interrupt. No timers required! But DREQ
   // must be on an interrupt pin. For Uno/Duemilanove/Diecimilla
@@ -734,5 +734,12 @@ byte bt_eepromData;
     	}
     } //if (!B_playMusic)
   } //if (BT_State == D_RunClockAlarmActive_State)
+  else
+  {
+    if (musicPlayer.playingMusic)
+    {
+      musicPlayer.stopPlaying();
+    }
+  }
   delay(100);
 }
