@@ -23,7 +23,7 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define VS1053DREQpin   3      // VS1053 Data request, ideally an Interrupt pin
 //#define D_RELOADvalFor20ms 25536
-#define D_RELOADvalFor2ms 61537
+#define D_RELOADvalFor2ms 61536
 #define D_mp3Clock 1
 #if (D_mp3Clock)
   //pinning for for MP3-clock
@@ -74,8 +74,8 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   // create shield-example object!
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
-byte BT_mk_month = 9;
-byte BT_mk_day = 28;
+byte BT_mk_month = 10;
+byte BT_mk_day = 2;
 
 bool BL_setupFinished = false;
 
@@ -108,7 +108,11 @@ MCP23008 MCP(0x20);
 #define D_D2_DP_OUT     6
 #define D_OE_RESET_OUT  7
 byte BT_buttonState = 0;
+byte BT_prevButtonState = 0;
 bool BL_midLedState = false;
+unsigned long UL_currentButtonMillis = 0;
+unsigned long UL_previousButtonMillis = 0;
+#define D_minButtonPressDurationInMs 100
 
 //state machine
 byte BT_State = D_PowerOff_State;
@@ -132,6 +136,8 @@ char C_filename[12];
 
 //indicator if currently MP3s are played
 bool B_playMusic = false;
+
+#define D_invertedAmpVolume 45
 
 /******************************************************************************
  * Funktionen
@@ -299,7 +305,7 @@ byte bt_eepromData;
   SD.begin(SDCARDCSpin);
   
   // Set volume for left, right channels. lower numbers == louder volume!
-  musicPlayer.setVolume(30,30);
+  musicPlayer.setVolume(D_invertedAmpVolume,D_invertedAmpVolume);
 
   // This option uses a pin interrupt. No timers required! But DREQ
   // must be on an interrupt pin. For Uno/Duemilanove/Diecimilla
@@ -451,27 +457,33 @@ byte bt_eepromData;
     MCP.write1(D_D2_DP_OUT, HIGH);
   }
   //read in buttons
+  UL_currentButtonMillis = millis();
   BT_buttonState = 0;
-  if (MCP.read1(D_ALMBUTTON) == HIGH)
+  if ((UL_currentButtonMillis - UL_previousButtonMillis) >= D_minButtonPressDurationInMs)
   {
-    BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMBUTTON)) & 0xFF);
-  }
-  if (MCP.read1(D_SETTIMEBUTTON) == HIGH)
-  {
-    BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_SETTIMEBUTTON)) & 0xFF);
-  }
-  if (MCP.read1(D_HOURINCBUTTON) == HIGH)
-  {
-    BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_HOURINCBUTTON)) & 0xFF);
-  }
-  if (MCP.read1(D_MININCBUTTON) == HIGH)
-  {
-    BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_MININCBUTTON)) & 0xFF);
-  }
-  if (MCP.read1(D_ALMONBUTTON) == HIGH)
-  {
-    BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMONBUTTON)) & 0xFF);
-  }
+    if (MCP.read1(D_ALMBUTTON) == HIGH)
+    {
+      BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMBUTTON)) & 0xFF);
+    }
+    if (MCP.read1(D_SETTIMEBUTTON) == HIGH)
+    {
+      BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_SETTIMEBUTTON)) & 0xFF);
+    }
+    if (MCP.read1(D_HOURINCBUTTON) == HIGH)
+    {
+      BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_HOURINCBUTTON)) & 0xFF);
+    }
+    if (MCP.read1(D_MININCBUTTON) == HIGH)
+    {
+      BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_MININCBUTTON)) & 0xFF);
+    } 
+    if (MCP.read1(D_ALMONBUTTON) == HIGH)
+    {
+      BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMONBUTTON)) & 0xFF);
+    }
+    //update time stamp for pressing
+    UL_previousButtonMillis += D_minButtonPressDurationInMs;
+  } //end of if ((UL_currentButtonMillis - UL_previousButtonMillis) >= D_minButtonPressDurationInMs)
   
   //state machine
   switch (BT_State)
@@ -741,5 +753,4 @@ byte bt_eepromData;
       musicPlayer.stopPlaying();
     }
   }
-  delay(100);
 }

@@ -1,0 +1,4 @@
+Donnerstag 02.10.25 21:01 nach Smartphone Uhr eingestellt
+ohne delay(100) in der loop
+mit 61536 timer reload wert (2^16-4000).
+Sonntag 05.10.25 18:30 Anzeige Uhr 17:09 also 90 Minuten zu spaet.
