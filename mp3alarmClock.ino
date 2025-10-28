@@ -23,7 +23,7 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define VS1053DREQpin   3      // VS1053 Data request, ideally an Interrupt pin
 //#define D_RELOADvalFor20ms 25536
-#define D_RELOADvalFor2ms 61536
+#define D_RELOADvalFor2ms 61540
 #define D_mp3Clock 1
 #if (D_mp3Clock)
   //pinning for for MP3-clock
@@ -75,7 +75,7 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
 byte BT_mk_month = 10;
-byte BT_mk_day = 2;
+byte BT_mk_day = 5;
 
 bool BL_setupFinished = false;
 
