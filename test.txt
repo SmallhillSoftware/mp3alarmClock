@@ -5,3 +5,12 @@ Sonntag 05.10.25 18:30 Anzeige Uhr 17:09 also 90 Minuten zu spaet.
 Neue SW mit Timerreloadwert 61540
 Synchronisiert mit CD-Wecker um 18:37 am 05.10.25.
 Aendert kaum etwas. Ist nach 1 Tag mindestens 20 min zu spaet.
+Neue SW 2025.10.28 mit 5ms Timerwert nach
+https://deepbluembedded.com/arduino-timer-calculator-code-generator/
+Synchronisiert mit CD-Wecker am 28.10.25 21:43 (mp3wecker auf 21:45)
+CD-Wecker am 29.10.25 21:02 (mp3Wecker auf 20:52)
+Fehler -0.85%. Aus 5ms oder 5000µs werden damit 4957.1122µs. Timer Reload Wert 55621
+SW 29.10.25
+Synchronisiert mit CD-Wecker am 29.10.25 21:27 (mp3wecker auf 21:27)
+Zeigt am 30.10.25 21:46 auf dem cdWecker und 21:48 auf dem mp3Wecker
+

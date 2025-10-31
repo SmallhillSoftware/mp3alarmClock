@@ -23,7 +23,8 @@
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
 #define VS1053DREQpin   3      // VS1053 Data request, ideally an Interrupt pin
 //#define D_RELOADvalFor20ms 25536
-#define D_RELOADvalFor2ms 61540
+//#define D_RELOADvalFor2ms 61540
+#define D_RELOADvalFor5ms 55621 //4957µs
 #define D_mp3Clock 1
 #if (D_mp3Clock)
   //pinning for for MP3-clock
@@ -75,7 +76,7 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
 byte BT_mk_month = 10;
-byte BT_mk_day = 5;
+byte BT_mk_day = 29;
 
 bool BL_setupFinished = false;
 
@@ -90,7 +91,8 @@ byte BT_dispHr = 0;
 byte BT_dispMin = 0;
 byte BT_dispState = 0;
 //unsigned int UI_twentyMSecs = 0;
-unsigned int UI_twoMSecs = 0;
+//unsigned int UI_twoMSecs = 0;
+unsigned int UI_fiveMSecs = 0;
 unsigned int UI_seconds = 0;
 
 //display variables
@@ -289,7 +291,7 @@ byte bt_eepromData;
   TCCR1A = 0;
   TCCR1B = 0;
   //Laden des Zaehlerwertes
-  TCNT1 = D_RELOADvalFor2ms;
+  TCNT1 = D_RELOADvalFor5ms;
   //Prescaler: 8
   TCCR1B |= (1 << CS11);
   //Enable timer overflow interrupt
@@ -369,9 +371,9 @@ ISR(TIMER1_OVF_vect)
   if (BL_setupFinished)
   {
     //1sec passed
-    if (UI_twoMSecs == 500)
+    if (UI_fiveMSecs == 200)
     {
-      UI_twoMSecs = 0;
+      UI_fiveMSecs = 0;
       UI_seconds++;
       if (BL_midLedState == false)
       {
@@ -382,7 +384,7 @@ ISR(TIMER1_OVF_vect)
         BL_midLedState = false;
       }
     }
-    //1 minute passed, 500 occurrences of 2ms = 1sec and 60 of them means 1 min
+    //1 minute passed, 200 occurrences of 5ms = 1sec and 60 of them means 1 min
     if (UI_seconds == 60)
     {
       UI_seconds = 0;
@@ -434,10 +436,10 @@ ISR(TIMER1_OVF_vect)
     //write value to port pin
     digitalWrite(D_SEGCLOCKpin, HIGH);
     //
-    UI_twoMSecs++;
+    UI_fiveMSecs++;
   } //if (BL_setupFinished)
   //reload counter value to make the IRQ firing again, always necessary independent from setup finished or not
-  TCNT1 = D_RELOADvalFor2ms;
+  TCNT1 = D_RELOADvalFor5ms;
   //END EXT-PIN-COUNT-IRQ  
 }
 
