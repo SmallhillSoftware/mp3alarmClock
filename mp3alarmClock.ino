@@ -76,7 +76,7 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
 byte BT_mk_month = 10;
-byte BT_mk_day = 29;
+byte BT_mk_day = 31;
 
 bool BL_setupFinished = false;
 
@@ -479,13 +479,13 @@ byte bt_eepromData;
     {
       BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_MININCBUTTON)) & 0xFF);
     } 
-    if (MCP.read1(D_ALMONBUTTON) == HIGH)
-    {
-      BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMONBUTTON)) & 0xFF);
-    }
     //update time stamp for pressing
     UL_previousButtonMillis += D_minButtonPressDurationInMs;
   } //end of if ((UL_currentButtonMillis - UL_previousButtonMillis) >= D_minButtonPressDurationInMs)
+  if (MCP.read1(D_ALMONBUTTON) == HIGH)
+  {
+    BT_buttonState = BT_buttonState | (byte)(((byte)(1 << D_ALMONBUTTON)) & 0xFF);
+  }
   
   //state machine
   switch (BT_State)
