@@ -1,0 +1,30 @@
+chip DIGCNTRB GAL16V8 ; COMPLEX__MODE
+
+; 1   2   3   4   5   6   7    8   9  10 
+ CLK RES  NC  NC  NC  NC  NC  NC  NC GND
+ OE  DG1 DG2 DG3 DG4 DG5  NC INJ  NC VCC
+;11   12  13  14  15  16  17  18  19  20
+
+;version:20250421
+;DG1..5 = Switch outputs for single digits, 0 switches on
+;RES = reset input, 1 resets
+;one single zero is shifted over all 5 outputs
+;reset synchronous reset of all outputs with 1
+
+equations
+
+INJ  = /DG1 * /DG2 * /DG3 * /DG4 * /DG5
+
+DG1  := /INJ * /RES * DG5
+    
+DG2  := INJ * /RES 
+     +  DG1 * /RES
+
+DG3  := INJ * /RES
+     +  DG2 * /RES
+
+DG4  := INJ * /RES
+     +  DG3 * /RES
+
+DG5  := INJ * /RES
+     +  DG4 * /RES

@@ -1,0 +1,72 @@
+EQN2JED - Boolean Equations to JEDEC file assembler (Version V003)
+Copyright (R) National Semiconductor Corporation 1990,1991
+
+Document file for c:\gal_prgs\digcntrb.eqn
+Device: 16V8
+
+$LABELS 20 CLK RES NC NC NC NC NC NC NC GND NC DG1 DG2 DG3 DG4 DG5 NC INJ NC
+ VCC
+
+
+Pin   Label               Type
+---   -----               ----
+1     CLK                 clock pin
+2     RES                 com input
+3     NC                  unused
+4     NC                  unused
+5     NC                  unused
+6     NC                  unused
+7     NC                  unused
+8     NC                  unused
+9     NC                  unused
+10    GND                 ground pin
+11    OE                  enable pin
+12    DG1                 pos,reg feedback
+13    DG2                 pos,reg feedback
+14    DG3                 pos,reg feedback
+15    DG4                 pos,reg feedback
+16    DG5                 pos,reg feedback
+17    NC                  unused
+18    INJ                 pos,trst,com feedback
+19    NC                  unused
+20    VCC                 power pin
+
+EQN2JED - Boolean Equations to JEDEC file assembler (Version V003)
+Copyright (R) National Semiconductor Corporation 1990,1991
+
+Device Utilization:
+
+No of dedicated inputs used               :  1/8  (12.5%)
+No of feedbacks used                      :  6/8  (75.0%)
+
+		------------------------------------------
+		Pin   Label                 Terms Usage
+		------------------------------------------
+		18    INJ                   2/8   (25.0%)
+		16    DG5                   2/8   (25.0%)
+		15    DG4                   2/8   (25.0%)
+		14    DG3                   2/8   (25.0%)
+		13    DG2                   2/8   (25.0%)
+		12    DG1                   1/8   (12.5%)
+		------------------------------------------
+		Total                      11/64  (17.2%)
+		------------------------------------------
+
+EQN2JED - Boolean Equations to JEDEC file assembler (Version V003)
+Copyright (R) National Semiconductor Corporation 1990,1991
+
+                            Chip diagram (DIP)
+
+                             ._____    _____.
+                             |     \__/     |
+                         CLK |  1        20 | VCC
+                         RES |  2        19 | NC
+                          NC |  3        18 | INJ
+                          NC |  4        17 | NC
+                          NC |  5        16 | DG5
+                          NC |  6        15 | DG4
+                          NC |  7        14 | DG3
+                          NC |  8        13 | DG2
+                          NC |  9        12 | DG1
+                         GND | 10        11 | NC
+                             |______________|
