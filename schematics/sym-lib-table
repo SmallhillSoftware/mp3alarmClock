@@ -1,0 +1,6 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "mp3wecker_disp_keys-eagle-import")(type "KiCad")(uri "/home/stefan/kicad/MP3-Wecker/mp3wecker_disp_keys-eagle-import.kicad_sym")(options "")(descr ""))
+  (lib (name "r8c13_consCounter2-eagle-import")(type "KiCad")(uri "/home/stefan/kicad/ConsumptionCounter_R8C13/r8c13_consCounter2-eagle-import.kicad_sym")(options "")(descr ""))
+  (lib (name "Display_Character")(type "KiCad")(uri "${KIPRJMOD}/Display_Character.kicad_sym")(options "")(descr ""))
+)

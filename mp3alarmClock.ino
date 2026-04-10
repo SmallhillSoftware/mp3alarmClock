@@ -25,7 +25,8 @@
 //#define D_RELOADvalFor20ms 25536
 //#define D_RELOADvalFor2ms 61540
 #define D_RELOADvalFor5ms 55621 //4957µs
-#define D_mp3Clock 1
+#define D_mp3Clock 0
+#define D_4511_4017 1
 #if (D_mp3Clock)
   //pinning for for MP3-clock
   #define D_SEGCLOCKpin 0
@@ -41,12 +42,21 @@
   #define D_BCDCpin 9
   #define D_BCDDpin 0
 #endif
-#define D_DISPSTATECLK 12 //C
-#define D_DISPSTATEALM 10 //A
-#define D_DISPSTATEACT 15 //F
-#define D_DISPSTATEVER 11 //b
-#define D_DISPSTATE_TST2 13 //d
-#define D_DISPSTATE_TST3 14 //e
+#if (D_4511_4017)
+  #define D_DISPSTATECLK 7 //L
+  #define D_DISPSTATEALM 3 //E
+  #define D_DISPSTATEACT 9 //stilisiertes Y
+  #define D_DISPSTATEVER 4 //stilisiertes V
+  #define D_DISPSTATE_TST2 5 //S
+  #define D_DISPSTATE_TST3 5 //S
+#else
+  #define D_DISPSTATECLK 12 //C
+  #define D_DISPSTATEALM 10 //A
+  #define D_DISPSTATEACT 15 //F
+  #define D_DISPSTATEVER 11 //b
+  #define D_DISPSTATE_TST2 13 //d
+  #define D_DISPSTATE_TST3 14 //e
+#endif
 
 #define D_PowerOff_State             0
 #define D_ShowVersion_State          1
@@ -75,8 +85,8 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   // create shield-example object!
   Adafruit_VS1053_FilePlayer(VS1053RESETpin, VS1053CSpin, VS1053DCSpin, VS1053DREQpin, SDCARDCSpin);
 
-byte BT_mk_month = 10;
-byte BT_mk_day = 31;
+byte BT_mk_month = 4;
+byte BT_mk_day = 10;
 
 bool BL_setupFinished = false;
 
@@ -148,14 +158,18 @@ void initSegmentCounter(void)
 {
   digitalWrite(D_SEGCLOCKpin, LOW);
   MCP.write1(D_OE_RESET_OUT, HIGH);
-  for (int i=0; i<5; i++)
-  {
-    //Generiere 5 Pulse um alle D-flip-flops durchzutakten
-    digitalWrite(D_SEGCLOCKpin, LOW);
-    delay(50);
-    digitalWrite(D_SEGCLOCKpin, HIGH);
-    delay(50);
-  }
+  #if (D_4511_4017)
+    delay(100);
+  #else
+    for (int i=0; i<5; i++)
+    {
+      //Generiere 5 Pulse um alle D-flip-flops durchzutakten
+      digitalWrite(D_SEGCLOCKpin, LOW);
+      delay(50);
+      digitalWrite(D_SEGCLOCKpin, HIGH);
+      delay(50);
+    }
+  #endif
   //Reset fuer Segment-Counter zuruecknehmen
   MCP.write1(D_OE_RESET_OUT, LOW);
 }
@@ -410,27 +424,47 @@ ISR(TIMER1_OVF_vect)
     digitalWrite(D_SEGCLOCKpin, LOW);
     if (INT_digitToUpdate == 0)
     {
-      writeBcdToSegPins(BT_dispHr, 1);
+      #if (D_4511_4017)
+        writeBcdToSegPins(BT_dispHr, 0);
+      #else
+        writeBcdToSegPins(BT_dispHr, 1);
+      #endif
       INT_digitToUpdate = 1;
     } //if (INT_digitToUpdate == 0)
     else if (INT_digitToUpdate == 1)
     {
-      writeBcdToSegPins(BT_dispHr, 0);
+      #if (D_4511_4017)
+        writeBcdToSegPins(BT_dispMin, 1);
+      #else
+        writeBcdToSegPins(BT_dispHr, 0);
+      #endif
       INT_digitToUpdate = 2;
     } //else if (INT_digitToUpdate == 1)
     else if (INT_digitToUpdate == 2)
     {
-      writeBcdToSegPins(BT_dispMin, 1);
+      #if (D_4511_4017)
+        writeBcdToSegPins(BT_dispMin, 0);
+      #else
+        writeBcdToSegPins(BT_dispMin, 1);
+      #endif
       INT_digitToUpdate = 3;
     } //else if (INT_digitToUpdate == 2)
     else if (INT_digitToUpdate == 3)
     {
-      writeBcdToSegPins(BT_dispMin, 0);
+      #if (D_4511_4017)
+        writeBcdToSegPins(BT_dispState, 2);
+      #else
+        writeBcdToSegPins(BT_dispMin, 0);
+      #endif
       INT_digitToUpdate = 4;
     } //else if (INT_digitToUpdate == 3)
     else if (INT_digitToUpdate == 4)
     {
-      writeBcdToSegPins(BT_dispState, 2);
+      #if (D_4511_4017)
+        writeBcdToSegPins(BT_dispHr, 1);
+      #else
+        writeBcdToSegPins(BT_dispState, 2);
+      #endif
       INT_digitToUpdate = 0;
     } //else if (INT_digitToUpdate == 4)
     //write value to port pin
